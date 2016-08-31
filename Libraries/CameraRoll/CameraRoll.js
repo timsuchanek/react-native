@@ -188,6 +188,10 @@ class CameraRoll {
     // TODO: Add the __DEV__ check back in to verify the Promise result
     return RCTCameraRollManager.getPhotos(params);
   }
+
+  static getGroupNames() {
+    return RCTCameraRollManager.getGroupNames();
+  }
 }
 
 CameraRoll.GroupTypesOptions = GROUP_TYPES_OPTIONS;

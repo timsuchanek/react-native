@@ -33,6 +33,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
+import android.provider.MediaStore.Images.ImageColumns;
 import android.text.TextUtils;
 
 import com.facebook.common.logging.FLog;
@@ -206,6 +207,71 @@ public class CameraRollManager extends ReactContextBaseJavaModule {
       }
     }
   }
+
+
+  /**
+   * Returns the available Image Buckets on the device.
+   *
+   * @param promise to be resolved or rejected
+   */
+  @ReactMethod
+  public void getGroupNames(Promise promise) {
+        // which image properties are we querying
+    String[] PROJECTION_BUCKET = {
+          ImageColumns.BUCKET_ID,
+          ImageColumns.BUCKET_DISPLAY_NAME
+    };
+
+    Context context = getReactApplicationContext();
+
+    // We want to order the albums by reverse chronological order. We abuse the
+    // "WHERE" parameter to insert a "GROUP BY" clause into the SQL statement.
+    // The template for "WHERE" parameter is like:
+    //    SELECT ... FROM ... WHERE (%s)
+    // and we make it look like:
+    //    SELECT ... FROM ... WHERE (1) GROUP BY 1,(2)
+    // The "(1)" means true. The "1,(2)" means the first two columns specified
+    // after SELECT. Note that because there is a ")" in the template, we use
+    // "(2" to match it.
+    String BUCKET_GROUP_BY =
+            "1) GROUP BY 1,(2";
+    String BUCKET_ORDER_BY = "MAX(datetaken) DESC";
+
+    // Get the base URI for the People table in the Contacts content provider.
+    Uri images = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+
+    Cursor cur = context.getContentResolver().query(
+            images, PROJECTION_BUCKET, BUCKET_GROUP_BY, null, BUCKET_ORDER_BY);
+
+
+    WritableArray result = new WritableNativeArray();
+
+    if (cur.moveToFirst()) {
+        String bucket;
+
+        int bucketColumn = cur.getColumnIndex(
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+
+        do {
+            // Get the field values
+            bucket = cur.getString(bucketColumn);
+            result.pushString(bucket);
+
+            // Do something with the values.
+        } while (cur.moveToNext());
+    }
+
+    try {
+      cur.close();
+    } finally {
+      promise.resolve(result);
+    }
+
+
+
+
+  }
+
 
   /**
    * Get photos from {@link MediaStore.Images}, most recent first.
